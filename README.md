@@ -1,6 +1,6 @@
 # dl-global
 ## Prepare environment
-Please prepare the environment for deep learning according to the documents in the folder "environment"
+Prepare the environment for deep learning according to the documents in the folder "environment"
 ## Tutorial
 Study the deep learning tutorial by reading:
 - Code: https://github.com/lisa-lab/DeepLearningTutorials/tree/master/code
