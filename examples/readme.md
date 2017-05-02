@@ -1,7 +1,7 @@
 Official examples for 
 1. A Machine Learning package
-  - Scikit-learn
+  &nbsp;&nbsp;- Scikit-learn
 2. Three Deep Learning packages
-  - Theano
-  - TensorFlow
-  - Keras
+  &nbsp;&nbsp;- Theano
+  &nbsp;&nbsp;- TensorFlow
+  &nbsp;&nbsp;- Keras
