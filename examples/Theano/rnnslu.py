@@ -164,7 +164,7 @@ class RNNSLU(object):
         self.emb = theano.shared(name='embeddings',
                                  value=0.2 * numpy.random.uniform(-1.0, 1.0,
                                  (ne+1, de))
-                                 # add one for padding at the end
+                                 # add one for padding at the end, this is why the index is -1 when padding
                                  .astype(theano.config.floatX))
         self.wx = theano.shared(name='wx',
                                 value=0.2 * numpy.random.uniform(-1.0, 1.0,
