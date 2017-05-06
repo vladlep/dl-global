@@ -37,7 +37,7 @@ def shuffle(lol, seed):
     shuffle inplace each list in the same order
     '''
     for l in lol:
-        random.seed(seed)
+        random.seed(seed) # use the same seed to make sure the same order for each list
         random.shuffle(l)
 
 
