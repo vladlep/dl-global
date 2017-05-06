@@ -250,8 +250,8 @@ class RNNSLU(object):
 
     def train(self, x, y, window_size, learning_rate):
 
-        cwords = contextwin(x, window_size)
-        words = list(map(lambda x: numpy.asarray(x).astype('int32'), cwords))
+        cwords = contextwin(x, window_size) # list of list
+        words = list(map(lambda x: numpy.asarray(x).astype('int32'), cwords)) # list of array
         labels = y
 
         self.sentence_train(words, labels, learning_rate)
