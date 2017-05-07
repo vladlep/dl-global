@@ -13,7 +13,7 @@ Study the deep learning tutorial by reading:
 ## Five popular Deep Learning frameworks
 - CNN: Convolutional Neural Networks
 - SdA: Stacked de-noising Auto-encoder
-- DBN: Deep Belief Networks
+- DBN: Deep Belief Networks :http://blog.csdn.net/itplus/article/details/19168989 
 - RNN: Recurrent Neural Networks
 - LSTM: Long-Short Term Memory
 ## Examples
