@@ -1,7 +1,7 @@
 # dl-global
 ## Join us
 - Whatsapp: https://chat.whatsapp.com/6nbTARfHIbN7oLhG6J5WZW
-- WeChat:![](images/socialmedia/WeChat.png)
+- WeChat:![](images/socialmedia/WeChat.jpg)
 
 ## Prepare environment
 Prepare the environment for deep learning according to the documents in the folder "environment"
