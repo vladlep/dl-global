@@ -2,7 +2,7 @@
 ## Join us
 - Whatsapp: https://chat.whatsapp.com/6nbTARfHIbN7oLhG6J5WZW
 - WeChat:
-&nbsp;&nbsp;&nbsp;&nbsp;<img src="images/socialmedia/WeChat.jpg" width="200">
+&nbsp;<img src="images/socialmedia/WeChat.jpg" width="200">
 ## Prepare environment
 Prepare the environment for deep learning according to the documents in the folder "environment"
 ## Tutorial
