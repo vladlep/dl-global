@@ -13,8 +13,8 @@ Study the deep learning tutorial by reading:
 ## Five popular Deep Learning frameworks
 - CNN: Convolutional Neural Networks
 - SdA: Stacked de-noising Auto-encoder
-- DBN: Deep Belief Networks :http://blog.csdn.net/itplus/article/details/19168989 
+- DBN: [Deep Belief Networks](http://blog.csdn.net/itplus/article/details/19168989) 
 - RNN: Recurrent Neural Networks
-- LSTM: Long-Short Term Memory
+- LSTM: [Long-Short Term Memory](http://colah.github.io/posts/2015-08-Understanding-LSTMs/)
 ## Examples
 Make the official examples of several machine learning / deep learning packages working. There examples are in the folder "examples"
