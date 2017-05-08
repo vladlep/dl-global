@@ -1,7 +1,7 @@
 # dl-global
 ## Join us
 - [Whatsapp](https://chat.whatsapp.com/6nbTARfHIbN7oLhG6J5WZW)
-- [WeChat](<img src="images/socialmedia/WeChat.jpg" width="200">)
+- [WeChat]("images/socialmedia/WeChat.jpg" width="200">)
 <img src="images/socialmedia/WeChat.jpg" width="200">
 
 ## Prepare environment
