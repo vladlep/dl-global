@@ -1,15 +1,15 @@
 # dl-global
 ## Join us
 - [Whatsapp](https://chat.whatsapp.com/6nbTARfHIbN7oLhG6J5WZW)
-- [WeChat]("images/socialmedia/WeChat.jpg" width="200">)
+- WeChat
 <img src="images/socialmedia/WeChat.jpg" width="200">
 
 ## Prepare environment
 Prepare the environment for deep learning according to the documents in the folder "environment"
 ## Tutorial
 Study the deep learning tutorial by reading:
-- Code: https://github.com/lisa-lab/DeepLearningTutorials/tree/master/code
-- PDF: http://deeplearning.net/tutorial/deeplearning.pdf
+- [Code](https://github.com/lisa-lab/DeepLearningTutorials/tree/master/code)
+- [PDF](http://deeplearning.net/tutorial/deeplearning.pdf)
 ## Five popular Deep Learning frameworks
 - CNN: Convolutional Neural Networks
 - SdA: Stacked de-noising Auto-encoder
