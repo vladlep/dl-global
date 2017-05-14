@@ -37,7 +37,7 @@ def shuffle(lol, seed):
     shuffle inplace each list in the same order
     '''
     for l in lol:
-        random.seed(seed) # use the same seed to make sure the same order for each list
+        random.seed(seed)
         random.shuffle(l)
 
 
@@ -164,7 +164,7 @@ class RNNSLU(object):
         self.emb = theano.shared(name='embeddings',
                                  value=0.2 * numpy.random.uniform(-1.0, 1.0,
                                  (ne+1, de))
-                                 # add one for padding at the end, this is why the index is -1 when padding
+                                 # add one for padding at the end
                                  .astype(theano.config.floatX))
         self.wx = theano.shared(name='wx',
                                 value=0.2 * numpy.random.uniform(-1.0, 1.0,
@@ -184,7 +184,7 @@ class RNNSLU(object):
         self.b = theano.shared(name='b',
                                value=numpy.zeros(nc,
                                dtype=theano.config.floatX))
-        # what is h0 for?
+        # what is h0 for? The initial value of: T.nnet.sigmoid(hidden_layer_output)
         self.h0 = theano.shared(name='h0',
                                 value=numpy.zeros(nh,
                                 dtype=theano.config.floatX))
@@ -197,7 +197,7 @@ class RNNSLU(object):
         # as many lines as words in the sentence
         # start-snippet-3
         
-        #idxs is words  as seen from
+        #idxs is words as seen from
         #"self.sentence_train = theano.function(inputs=[idxs, y_sentence, lr]" 
         # "self.sentence_train(words, labels, learning_rate)
         idxs = T.imatrix()  
@@ -206,10 +206,10 @@ class RNNSLU(object):
         y_sentence = T.ivector('y_sentence')  # labels
         # end-snippet-3 start-snippet-4
 
-        def recurrence(x_t, h_tm1): #? h_tm1
-            h_t = T.nnet.sigmoid(T.dot(x_t, self.wx)
+        def recurrence(x_t, h_tm1): #? h_tm1, the initial value of h
+            h_t = T.nnet.sigmoid(T.dot(x_t, self.wx) #x_t is 1-by-de*cs, wx is de*cs-by-nh
                                  + T.dot(h_tm1, self.wh) + self.bh)
-            s_t = T.nnet.softmax(T.dot(h_t, self.w) + self.b)
+            s_t = T.nnet.softmax(T.dot(h_t, self.w) + self.b) #w is nh-by-nc
             return [h_t, s_t]
 
         [h, s], _ = theano.scan(fn=recurrence,
@@ -217,7 +217,7 @@ class RNNSLU(object):
                                 outputs_info=[self.h0, None],
                                 n_steps=x.shape[0])
 
-        p_y_given_x_sentence = s[:, 0, :]
+        p_y_given_x_sentence = s[:, 0, :] # ? [h,s]是每一层的隐藏层与输出层，都是三维矩阵。
         y_pred = T.argmax(p_y_given_x_sentence, axis=1)
         # end-snippet-4
 
@@ -296,11 +296,15 @@ def main(param=None):
         os.mkdir(folder)
 
     # load the dataset
+    # type(train_set)==tuple, len(train_set)==3, len(train_set[0])==len(train_set[1])==len(train_set[2])==3983,
+    # train_set[0][0].shape==15， train_set[0][1].shape==10
     train_set, valid_set, test_set, dic = atisfold(param['fold'])
 
     idx2label = dict((k, v) for v, k in dic['labels2idx'].items())
     idx2word = dict((k, v) for v, k in dic['words2idx'].items())
 
+    # train_lex and train_ne are lists of the same length(3983), train_lex[i].shape==train_ne[i].shape==train_y[i].shape.
+    # numbers 126 is train_y means null
     train_lex, train_ne, train_y = train_set # ?
     valid_lex, valid_ne, valid_y = valid_set
     test_lex, test_ne, test_y = test_set

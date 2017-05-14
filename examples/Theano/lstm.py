@@ -1,5 +1,30 @@
 '''
 Build a tweet sentiment analyzer
+
+    dim_proj=128,  # word embeding dimension and LSTM number of hidden units.
+    patience=10,  # Number of epoch to wait before early stop if no progress
+    max_epochs=5000,  # The maximum number of epoch to run
+    dispFreq=10,  # Display to stdout the training progress every N updates
+    decay_c=0.,  # Weight decay for the classifier applied to the U weights.
+    lrate=0.0001,  # Learning rate for sgd (not used for adadelta and rmsprop)
+    n_words=10000,  # Vocabulary size
+    optimizer=adadelta,  # sgd, adadelta and rmsprop available, sgd very hard to use, not recommanded (probably need momentum and decaying learning rate).
+    encoder='lstm',  # TODO: can be removed must be lstm.
+    saveto='lstm_model.npz',  # The best model will be saved there
+    validFreq=370,  # Compute the validation error after this number of update.
+    saveFreq=1110,  # Save the parameters after every saveFreq updates
+    maxlen=100,  # Sequence longer then this get ignored
+    batch_size=16,  # The batch size during training.
+    valid_batch_size=64,  # The batch size used for validation/test set.
+    dataset='imdb',
+
+    # Parameter for extra option
+    noise_std=0.,
+    use_dropout=True,  # if False slightly faster, but worst test error
+                       # This frequently need a bigger model.
+    reload_model=None,  # Path to a saved model we want to start from.
+    test_size=-1,  # If >0, we keep only this number of test example.
+    
 '''
 
 from __future__ import print_function
@@ -52,7 +77,7 @@ def get_minibatches_idx(n, minibatch_size, shuffle=False):
 
 
 def get_dataset(name):
-    return datasets[name][0], datasets[name][1]
+    return datasets[name][0], datasets[name][1] # datasets = {'imdb': (imdb.load_data, imdb.prepare_data)}
 
 
 def zipp(params, tparams):
@@ -95,7 +120,10 @@ def init_params(options):
     # embedding
     randn = numpy.random.rand(options['n_words'],
                               options['dim_proj'])
-    params['Wemb'] = (0.01 * randn).astype(config.floatX)
+    params['Wemb'] = (0.01 * randn).astype(config.floatX) # initialized as a random number between (0 and 0.01)
+    
+    # layers = {'lstm': (param_init_lstm, lstm_layer)}    
+    # the following parameters will be added by get_layer: Wi, Wf, Wc, Wo, Ui, Uf, Uc, Uo, bi, bf, bc, bo.
     params = get_layer(options['encoder'])[0](options,
                                               params,
                                               prefix=options['encoder'])
@@ -125,7 +153,7 @@ def init_tparams(params):
 
 
 def get_layer(name):
-    fns = layers[name]
+    fns = layers[name] # layers = {'lstm': (param_init_lstm, lstm_layer)}
     return fns
 
 
@@ -144,56 +172,81 @@ def param_init_lstm(options, params, prefix='lstm'):
     W = numpy.concatenate([ortho_weight(options['dim_proj']),
                            ortho_weight(options['dim_proj']),
                            ortho_weight(options['dim_proj']),
-                           ortho_weight(options['dim_proj'])], axis=1)
+                           ortho_weight(options['dim_proj'])], axis=1) # lstm_W is 128 by 128*4
     params[_p(prefix, 'W')] = W
     U = numpy.concatenate([ortho_weight(options['dim_proj']),
                            ortho_weight(options['dim_proj']),
                            ortho_weight(options['dim_proj']),
-                           ortho_weight(options['dim_proj'])], axis=1)
+                           ortho_weight(options['dim_proj'])], axis=1) # lstm_U is 128 by 128*4
     params[_p(prefix, 'U')] = U
     b = numpy.zeros((4 * options['dim_proj'],))
     params[_p(prefix, 'b')] = b.astype(config.floatX)
 
     return params
 
+# proj = get_layer(options['encoder'])[1](tparams, emb, options, prefix='lstm', mask=None)
+
+# state_below is the emb of a batch of words. The dim of state_below is [n_timesteps, n_samples, options['dim_proj'], where 
+# n_timesteps is number of words in context window
+# n_samples is batch_size
+# options['dim_proj'] is dim_proj (128 here)
 
 def lstm_layer(tparams, state_below, options, prefix='lstm', mask=None):
+    # the shape of state_below is: (maxlen, batch_size, proj_dim) or (maxlen, proj_dim)
     nsteps = state_below.shape[0]
     if state_below.ndim == 3:
-        n_samples = state_below.shape[1]
+        n_samples = state_below.shape[1] # n_samples is batch_size
     else:
         n_samples = 1
 
-    assert mask is not None
+    assert mask is not None # the dim of mask is (maxlen, batch_size)
 
     def _slice(_x, n, dim):
+        # the input dim == options['dim_proj'], which is 128
         if _x.ndim == 3:
-            return _x[:, :, n * dim:(n + 1) * dim]
+            return _x[:, :, n * dim:(n + 1) * dim] # the last dim of _x is the dim_proj (128 here)
         return _x[:, n * dim:(n + 1) * dim]
 
     def _step(m_, x_, h_, c_):
-        preact = tensor.dot(h_, tparams[_p(prefix, 'U')])
+        # m_ the dimension of （ 1 by batch_size） 
+        # x_ has the size of (batch_size, 4*dim_proj)
+        # h_ has the dimension of （batch_size， dim_proj）
+        # c_ has the dimension of （batch_size， dim_proj）
+        # tparams[_p(prefix, 'U') has the dimension of (dim_proj, 4*dim_proj)
+        # preact has the dimension of （batch_size， 4*dim_proj）
+        preact = tensor.dot(h_, tparams[_p(prefix, 'U')]) # attention! no bias here!
         preact += x_
 
-        i = tensor.nnet.sigmoid(_slice(preact, 0, options['dim_proj']))
-        f = tensor.nnet.sigmoid(_slice(preact, 1, options['dim_proj']))
-        o = tensor.nnet.sigmoid(_slice(preact, 2, options['dim_proj']))
-        c = tensor.tanh(_slice(preact, 3, options['dim_proj']))
+        # i, f, o, c, their dim are all (batch_size, dim_proj)
+        i = tensor.nnet.sigmoid(_slice(preact, 0, options['dim_proj'])) # i: input
+        f = tensor.nnet.sigmoid(_slice(preact, 1, options['dim_proj'])) # f: forget
+        o = tensor.nnet.sigmoid(_slice(preact, 2, options['dim_proj'])) # o: output
+        c = tensor.tanh(_slice(preact, 3, options['dim_proj']))         # c: cell
 
-        c = f * c_ + i * c
-        c = m_[:, None] * c + (1. - m_)[:, None] * c_
+        # m_ has the shape of (batch_size, 1)
+        # m_[:, None] has the shape of (1 by batch_size)
+        c = f * c_ + i * c # element-wise product, and then plus, leading to c which has the shape of (batch_size, dim_proj)
+        c = m_[:, None] * c + (1. - m_)[:, None] * c_ # use the calculated c if word exists, otherwise, use the previous c
 
         h = o * tensor.tanh(c)
-        h = m_[:, None] * h + (1. - m_)[:, None] * h_
+        h = m_[:, None] * h + (1. - m_)[:, None] * h_ # use the calculated h if word exists, otherwise, use the previous h
 
+        # h and c all have the shape of (batch_size, dim_proj)
         return h, c
 
+    # the shape of state_below is: (maxlen, batch_size, proj_dim)
+    # the shape of tparams[_p(prefix, 'W')] is: (proj_dim, 4*proj_dim)
     state_below = (tensor.dot(state_below, tparams[_p(prefix, 'W')]) +
                    tparams[_p(prefix, 'b')])
 
-    dim_proj = options['dim_proj']
+    # now the dim of state_below is: (maxlen, batch_size, 4*dim_proj) 
+    # scan over the first dim of an array. If sequences consists of two arrays (in this case, mask and state_below), 
+    # they are scanned in parallel. Namely, scan over the first dim of each array.
+    dim_proj = options['dim_proj'] # 128
     rval, updates = theano.scan(_step,
-                                sequences=[mask, state_below],
+                                # Each step, get one row from mask an state_below, respectively
+                                sequences=[mask, state_below], # the dim of mask is: (maxlen, batch_size). 
+                                # outputs_info is dimension of [n_samples, dim_proj]
                                 outputs_info=[tensor.alloc(numpy_floatX(0.),
                                                            n_samples,
                                                            dim_proj),
@@ -201,7 +254,10 @@ def lstm_layer(tparams, state_below, options, prefix='lstm', mask=None):
                                                            n_samples,
                                                            dim_proj)],
                                 name=_p(prefix, '_layers'),
-                                n_steps=nsteps)
+                                n_steps=nsteps) #nsteps = state_below.shape[0], which is the number of words in the context window
+
+    # the shape of rval[0] is maxlen by batch_size by dim_proj, (97 by 16 by 128 here) ?
+    # rval[0] is related to h, rval[1] is related to c
     return rval[0]
 
 
@@ -267,32 +323,47 @@ def adadelta(lr, tparams, grads, x, mask, y, cost):
        Rate Method*, arXiv:1212.5701.
     """
 
+    # the grad
     zipped_grads = [theano.shared(p.get_value() * numpy_floatX(0.),
                                   name='%s_grad' % k)
-                    for k, p in tparams.items()]
+                    for k, p in tparams.items()] # list of shared variables initialized by 0s
+    
+    # the Root Mean Square (RMS) of delta_x
     running_up2 = [theano.shared(p.get_value() * numpy_floatX(0.),
                                  name='%s_rup2' % k)
-                   for k, p in tparams.items()]
+                   for k, p in tparams.items()] # list of shared variables initialized by 0s
+    
+    # the Root Mean Square (RMS) of grad
     running_grads2 = [theano.shared(p.get_value() * numpy_floatX(0.),
                                     name='%s_rgrad2' % k)
-                      for k, p in tparams.items()]
+                      for k, p in tparams.items()] #list of shared variables initialized by 0s
 
+    # update shared_grad from grad
     zgup = [(zg, g) for zg, g in zip(zipped_grads, grads)]
+    
+    # the accumulate of the RMS of grad (accumulateRMSgrad)
     rg2up = [(rg2, 0.95 * rg2 + 0.05 * (g ** 2))
-             for rg2, g in zip(running_grads2, grads)]
+             for rg2, g in zip(running_grads2, grads)] # equation 8 of the publication, 95% from old, 5% from new
 
-    f_grad_shared = theano.function([x, mask, y], cost, updates=zgup + rg2up,
+    # given [x, mask, y], calculate the cost using updated accumulateRMSgrad
+    f_grad_shared = theano.function([x, mask, y], cost, updates=zgup + rg2up, # 
                                     name='adadelta_f_grad_shared')
 
-    updir = [-tensor.sqrt(ru2 + 1e-6) / tensor.sqrt(rg2 + 1e-6) * zg
+    # delta_x
+    updir = [-tensor.sqrt(ru2 + 1e-6) / tensor.sqrt(rg2 + 1e-6) * zg # updir is the delta_x
              for zg, ru2, rg2 in zip(zipped_grads,
-                                     running_up2,
-                                     running_grads2)]
-    ru2up = [(ru2, 0.95 * ru2 + 0.05 * (ud ** 2))
+                                     running_up2, # running_up2 is the Root Mean Square (RMS) of delta_x
+                                     running_grads2)] # running_grads2 is the Root Mean Square (RMS) of grad
+
+    # the accumulate of the RMS of delta_x (accumulateRMSdelta_x)
+    ru2up = [(ru2, 0.95 * ru2 + 0.05 * (ud ** 2)) # ru2up: the accumulate of the RMS of delta_x
              for ru2, ud in zip(running_up2, updir)]
+    
+    # apply update x(t+1) = x(t) + delta_x
     param_up = [(p, p + ud) for p, ud in zip(tparams.values(), updir)]
 
-    f_update = theano.function([lr], [], updates=ru2up + param_up,
+    # update accumulateRMSdelta_x and x
+    f_update = theano.function([lr], [], updates=ru2up + param_up, # "ru2up + param_up": concatenate ru2up and param_up
                                on_unused_input='ignore',
                                name='adadelta_f_update')
 
@@ -370,26 +441,35 @@ def build_model(tparams, options):
     # Used for dropout.
     use_noise = theano.shared(numpy_floatX(0.))
 
-    x = tensor.matrix('x', dtype='int64')
-    mask = tensor.matrix('mask', dtype=config.floatX)
-    y = tensor.vector('y', dtype='int64')
+    # x is matrix of words, each word is represented by a index (a scalar number) in the vocabulary
+    x = tensor.matrix('x', dtype='int64') # dim: maxlen by batch_size, where maxlen is the length of context window
+    mask = tensor.matrix('mask', dtype=config.floatX) # the dim of mask is: maxlen by batch_size
+    y = tensor.vector('y', dtype='int64') # dim: 1 by batch_size, consists of 0s and 1s
 
-    n_timesteps = x.shape[0]
-    n_samples = x.shape[1]
+    n_timesteps = x.shape[0] # number of words in the context window
+    n_samples = x.shape[1] # number of datapoints in each batch
 
+    # the shape of emb here is: 97 x 16 x 128, where 97 is number of words in the context window. 16 is the batch_size, 128 is the emb_dim
     emb = tparams['Wemb'][x.flatten()].reshape([n_timesteps,
                                                 n_samples,
-                                                options['dim_proj']])
+                                                options['dim_proj']]) # x.flatten() is the index for getting the embedding of selected words 
+
+    # 'proj' is maxlen by batch_size by dim_proj
     proj = get_layer(options['encoder'])[1](tparams, emb, options,
                                             prefix=options['encoder'],
                                             mask=mask)
     if options['encoder'] == 'lstm':
-        proj = (proj * mask[:, :, None]).sum(axis=0)
-        proj = proj / mask.sum(axis=0)[:, None]
+        # what does None mean? None add a new dim. e.g. mask.shape==(maxlen, batch_size), mask[:, :, None].shape==(maxlen, batch_size,1)
+        proj = (proj * mask[:, :, None]).sum(axis=0) # the shape of 'proj' is (batch_size, dim_proj) after this step
+        proj = proj / mask.sum(axis=0)[:, None] # get the mean value of h from all cells (the number of cells is maxlen)
     if options['use_dropout']:
         proj = dropout_layer(proj, use_noise, trng)
 
-    pred = tensor.nnet.softmax(tensor.dot(proj, tparams['U']) + tparams['b'])
+    # 'proj' is batch_size by dim_proj
+    # 'U' is dim_proj (128) by n_classes
+    # 'b' is 1 by n_classes
+    # 'pred' is batch_size by n_classes
+    pred = tensor.nnet.softmax(tensor.dot(proj, tparams['U']) + tparams['b']) # probability matrix, 
 
     f_pred_prob = theano.function([x, mask], pred, name='f_pred_prob')
     f_pred = theano.function([x, mask], pred.argmax(axis=1), name='f_pred')
@@ -472,12 +552,17 @@ def train_lstm(
 ):
 
     # Model options
-    model_options = locals().copy()
+    model_options = locals().copy() #Update and return a dictionary representing the current local symbol table.
     print("model options", model_options)
 
     load_data, prepare_data = get_dataset(dataset)
 
     print('Loading data')
+    # len(train[0])==1998, len(train[0][0])==12, len(train[0][1997])==99,
+    # type(train[1])==list, len(train[1])==1998, train[1][0]==0
+    
+    # len(valid[0])==105
+    # len(test[0])==500
     train, valid, test = load_data(n_words=n_words, valid_portion=0.05,
                                    maxlen=maxlen)
     if test_size > 0:
@@ -496,7 +581,7 @@ def train_lstm(
     print('Building model')
     # This create the initial parameters as numpy ndarrays.
     # Dict name (string) -> numpy ndarray
-    params = init_params(model_options)
+    params = init_params(model_options) # model parameters for grad
 
     if reload_model:
         load_params('lstm_model.npz', params)
@@ -551,7 +636,7 @@ def train_lstm(
         for eidx in range(max_epochs):
             n_samples = 0
 
-            # Get new shuffled index for the training set.
+            # Get new shuffled index for the training set. Totally, 1998 sentences for training.
             kf = get_minibatches_idx(len(train[0]), batch_size, shuffle=True)
 
             for _, train_index in kf:
@@ -559,14 +644,16 @@ def train_lstm(
                 use_noise.set_value(1.)
 
                 # Select the random examples for this minibatch
-                y = [train[1][t] for t in train_index]
-                x = [train[0][t]for t in train_index]
+                y = [train[1][t] for t in train_index] # y is a list of 16 elements, each element is either 0 or 1, where 16 is batch_size
+                x = [train[0][t]for t in train_index] # x is a list of 16 elements, each element is list of different lengths.
 
                 # Get the data in numpy.ndarray format
                 # This swap the axis!
-                # Return something of shape (minibatch maxlen, n samples)
+                # Return: x of shape (maxlen, minibatch) like (97, 16), 
+                #         mask of the same shape as x (padding zeros for short x columns), 
+                #         y is a list (length is minibatch) of 0s and 1s
                 x, mask, y = prepare_data(x, y)
-                n_samples += x.shape[1]
+                n_samples += x.shape[1] # x.shape[1] is the number of data points of this batch
 
                 cost = f_grad_shared(x, mask, y)
                 f_update(lrate)
