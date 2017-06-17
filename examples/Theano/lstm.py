@@ -221,7 +221,7 @@ def lstm_layer(tparams, state_below, options, prefix='lstm', mask=None):
         i = tensor.nnet.sigmoid(_slice(preact, 0, options['dim_proj'])) # i: input
         f = tensor.nnet.sigmoid(_slice(preact, 1, options['dim_proj'])) # f: forget
         o = tensor.nnet.sigmoid(_slice(preact, 2, options['dim_proj'])) # o: output
-        c = tensor.tanh(_slice(preact, 3, options['dim_proj']))         # c: cell
+        c = tensor.tanh(_slice(preact, 3, options['dim_proj']))         # c: candidate
 
         # m_ has the shape of (batch_size, 1)
         # m_[:, None] has the shape of (1 by batch_size)
