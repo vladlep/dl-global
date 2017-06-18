@@ -8,8 +8,8 @@
 Prepare the environment for deep learning according to the documents in the folder "environment"
 ## Tutorial
 Study the deep learning tutorial by reading:
-- [Code](https://github.com/lisa-lab/DeepLearningTutorials/tree/master/code)
-- [PDF](http://deeplearning.net/tutorial/deeplearning.pdf)
+- [Code](https://github.com/ykaitao/dl-global/tree/master/examples/Theano)
+- [PDF](https://github.com/ykaitao/dl-global/blob/master/Deep%20learning%20tutorials.pdf)
 ## Five popular Deep Learning frameworks
 - CNN: Convolutional Neural Networks
 - SdA: Stacked de-noising Auto-encoder
