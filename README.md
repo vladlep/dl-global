@@ -3,7 +3,7 @@
 - [Whatsapp](https://chat.whatsapp.com/6nbTARfHIbN7oLhG6J5WZW)
 
 ## Prepare environment
-Prepare the environment for deep learning according to the documents in the folder "environment"
+Prepare the environment for deep learning according to the documents in the folder [environment](https://github.com/ykaitao/dl-global/tree/master/environment)
 ## Tutorial
 Study the deep learning tutorial by reading:
 - [Code](https://github.com/ykaitao/dl-global/tree/master/examples/Theano)
