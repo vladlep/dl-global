@@ -15,4 +15,4 @@ Study the deep learning tutorial by reading:
 - RNN: Recurrent Neural Networks
 - LSTM: [Long-Short Term Memory](http://colah.github.io/posts/2015-08-Understanding-LSTMs/)
 ## Examples
-Make the official examples of several machine learning / deep learning packages working. There examples are in the folder "examples"
+Make the official examples of several machine learning / deep learning packages working. There examples are in the folder [examples](https://github.com/ykaitao/dl-global/tree/master/examples)
